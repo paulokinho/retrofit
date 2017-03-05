@@ -25,7 +25,7 @@ import okio.ForwardingSource;
 import okio.Okio;
 
 final class OkHttpCall<T> implements Call<T> {
-  private final ServiceMethod<T> serviceMethod;
+  private final ServiceMethod<T, ?> serviceMethod;
   private final Object[] args;
 
   private volatile boolean canceled;
@@ -35,7 +35,7 @@ final class OkHttpCall<T> implements Call<T> {
   private Throwable creationFailure; // Either a RuntimeException or IOException.
   private boolean executed;
 
-  OkHttpCall(ServiceMethod<T> serviceMethod, Object[] args) {
+  OkHttpCall(ServiceMethod<T, ?> serviceMethod, Object[] args) {
     this.serviceMethod = serviceMethod;
     this.args = args;
   }
@@ -203,6 +203,7 @@ final class OkHttpCall<T> implements Call<T> {
     }
 
     if (code == 204 || code == 205) {
+      rawBody.close();
       return Response.success(null, rawResponse);
     }
 
@@ -231,7 +232,12 @@ final class OkHttpCall<T> implements Call<T> {
   }
 
   @Override public boolean isCanceled() {
-    return canceled;
+    if (canceled) {
+      return true;
+    }
+    synchronized (this) {
+      return rawCall != null && rawCall.isCanceled();
+    }
   }
 
   static final class NoContentResponseBody extends ResponseBody {

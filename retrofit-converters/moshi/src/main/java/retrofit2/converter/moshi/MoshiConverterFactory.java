@@ -50,21 +50,38 @@ public final class MoshiConverterFactory extends Converter.Factory {
 
   /** Create an instance using {@code moshi} for conversion. */
   public static MoshiConverterFactory create(Moshi moshi) {
-    return new MoshiConverterFactory(moshi, false);
+    if (moshi == null) throw new NullPointerException("moshi == null");
+    return new MoshiConverterFactory(moshi, false, false, false);
   }
 
   private final Moshi moshi;
   private final boolean lenient;
+  private final boolean failOnUnknown;
+  private final boolean serializeNulls;
 
-  private MoshiConverterFactory(Moshi moshi, boolean lenient) {
-    if (moshi == null) throw new NullPointerException("moshi == null");
+  private MoshiConverterFactory(Moshi moshi, boolean lenient, boolean failOnUnknown,
+      boolean serializeNulls) {
     this.moshi = moshi;
     this.lenient = lenient;
+    this.failOnUnknown = failOnUnknown;
+    this.serializeNulls = serializeNulls;
   }
 
   /** Return a new factory which uses {@linkplain JsonAdapter#lenient() lenient} adapters. */
   public MoshiConverterFactory asLenient() {
-    return new MoshiConverterFactory(moshi, true);
+    return new MoshiConverterFactory(moshi, true, failOnUnknown, serializeNulls);
+  }
+
+  /**
+   * Return a new factory which uses {@link JsonAdapter#failOnUnknown()} adapters.
+   */
+  public MoshiConverterFactory failOnUnknown() {
+    return new MoshiConverterFactory(moshi, lenient, true, serializeNulls);
+  }
+
+  /** Return a new factory which includes null values into the serialized JSON. */
+  public MoshiConverterFactory withNullSerialization() {
+    return new MoshiConverterFactory(moshi, lenient, failOnUnknown, true);
   }
 
   @Override
@@ -74,15 +91,26 @@ public final class MoshiConverterFactory extends Converter.Factory {
     if (lenient) {
       adapter = adapter.lenient();
     }
+    if (failOnUnknown) {
+      adapter = adapter.failOnUnknown();
+    }
+    if (serializeNulls) {
+      adapter = adapter.serializeNulls();
+    }
     return new MoshiResponseBodyConverter<>(adapter);
   }
 
-  @Override
-  public Converter<?, RequestBody> requestBodyConverter(Type type,
+  @Override public Converter<?, RequestBody> requestBodyConverter(Type type,
       Annotation[] parameterAnnotations, Annotation[] methodAnnotations, Retrofit retrofit) {
     JsonAdapter<?> adapter = moshi.adapter(type, jsonAnnotations(parameterAnnotations));
     if (lenient) {
       adapter = adapter.lenient();
+    }
+    if (failOnUnknown) {
+      adapter = adapter.failOnUnknown();
+    }
+    if (serializeNulls) {
+      adapter = adapter.serializeNulls();
     }
     return new MoshiRequestBodyConverter<>(adapter);
   }

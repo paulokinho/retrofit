@@ -20,20 +20,17 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.http.GET;
-import rx.Single;
-import rx.observers.TestSubscriber;
+import rx.Completable;
 import rx.schedulers.TestScheduler;
 
-public final class SingleSchedulerTest {
+public final class CompletableWithSchedulerTest {
   @Rule public final MockWebServer server = new MockWebServer();
+  @Rule public final RecordingSubscriber.Rule subscriberRule = new RecordingSubscriber.Rule();
 
   interface Service {
-    @GET("/") Single<String> body();
-    @GET("/") Single<Response<String>> response();
-    @GET("/") Single<Result<String>> result();
+    @GET("/") Completable completable();
   }
 
   private final TestScheduler scheduler = new TestScheduler();
@@ -42,45 +39,19 @@ public final class SingleSchedulerTest {
   @Before public void setUp() {
     Retrofit retrofit = new Retrofit.Builder()
         .baseUrl(server.url("/"))
-        .addConverterFactory(new StringConverterFactory())
         .addCallAdapterFactory(RxJavaCallAdapterFactory.createWithScheduler(scheduler))
         .build();
     service = retrofit.create(Service.class);
   }
 
-  @Test public void bodyUsesScheduler() {
+  @Test public void completableUsesScheduler() {
     server.enqueue(new MockResponse().setBody("Hi"));
 
-    TestSubscriber<String> subscriber = new TestSubscriber<>();
-    service.body().subscribe(subscriber);
-    subscriber.assertNoValues();
-    subscriber.assertNoTerminalEvent();
+    RecordingSubscriber<String> subscriber = subscriberRule.create();
+    service.completable().unsafeSubscribe(subscriber);
+    subscriber.assertNoEvents();
 
     scheduler.triggerActions();
-    subscriber.assertValueCount(1);
-  }
-
-  @Test public void responseUsesScheduler() {
-    server.enqueue(new MockResponse().setBody("Hi"));
-
-    TestSubscriber<Response<String>> subscriber = new TestSubscriber<>();
-    service.response().subscribe(subscriber);
-    subscriber.assertNoValues();
-    subscriber.assertNoTerminalEvent();
-
-    scheduler.triggerActions();
-    subscriber.assertValueCount(1);
-  }
-
-  @Test public void resultUsesScheduler() {
-    server.enqueue(new MockResponse().setBody("Hi"));
-
-    TestSubscriber<Result<String>> subscriber = new TestSubscriber<>();
-    service.result().subscribe(subscriber);
-    subscriber.assertNoValues();
-    subscriber.assertNoTerminalEvent();
-
-    scheduler.triggerActions();
-    subscriber.assertValueCount(1);
+    subscriber.assertCompleted();
   }
 }

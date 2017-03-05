@@ -13,25 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package retrofit2.adapter.rxjava;
+package retrofit2.adapter.rxjava2;
 
-import java.lang.reflect.Type;
-import retrofit2.Call;
-import retrofit2.CallAdapter;
-import rx.Observable;
-import rx.Single;
+import retrofit2.Response;
 
-final class SingleHelper {
-  static CallAdapter<Single<?>> makeSingle(final CallAdapter<Observable<?>> callAdapter) {
-    return new CallAdapter<Single<?>>() {
-      @Override public Type responseType() {
-        return callAdapter.responseType();
-      }
-
-      @Override public <R> Single<?> adapt(Call<R> call) {
-        Observable<?> observable = callAdapter.adapt(call);
-        return observable.toSingle();
-      }
-    };
+/** @deprecated Use {@link retrofit2.HttpException}. */
+@Deprecated
+public final class HttpException extends retrofit2.HttpException {
+  public HttpException(Response<?> response) {
+    super(response);
   }
 }

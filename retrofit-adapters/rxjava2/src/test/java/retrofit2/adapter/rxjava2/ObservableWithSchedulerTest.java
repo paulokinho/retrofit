@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package retrofit2.adapter.rxjava;
+package retrofit2.adapter.rxjava2;
 
+import io.reactivex.Observable;
+import io.reactivex.schedulers.TestScheduler;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.Before;
@@ -23,12 +25,10 @@ import org.junit.Test;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.http.GET;
-import rx.Observable;
-import rx.observers.TestSubscriber;
-import rx.schedulers.TestScheduler;
 
-public final class ObservableSchedulerTest {
+public final class ObservableWithSchedulerTest {
   @Rule public final MockWebServer server = new MockWebServer();
+  @Rule public final RecordingObserver.Rule observerRule = new RecordingObserver.Rule();
 
   interface Service {
     @GET("/") Observable<String> body();
@@ -43,47 +43,41 @@ public final class ObservableSchedulerTest {
     Retrofit retrofit = new Retrofit.Builder()
         .baseUrl(server.url("/"))
         .addConverterFactory(new StringConverterFactory())
-        .addCallAdapterFactory(RxJavaCallAdapterFactory.createWithScheduler(scheduler))
+        .addCallAdapterFactory(RxJava2CallAdapterFactory.createWithScheduler(scheduler))
         .build();
     service = retrofit.create(Service.class);
   }
 
   @Test public void bodyUsesScheduler() {
-    server.enqueue(new MockResponse().setBody("Hi"));
+    server.enqueue(new MockResponse());
 
-    TestSubscriber<String> subscriber = new TestSubscriber<>();
-    service.body().subscribe(subscriber);
-    subscriber.assertNoValues();
-    subscriber.assertNoTerminalEvent();
+    RecordingObserver<Object> observer = observerRule.create();
+    service.body().subscribe(observer);
+    observer.assertNoEvents();
 
     scheduler.triggerActions();
-    subscriber.assertValueCount(1);
-    subscriber.assertCompleted();
+    observer.assertAnyValue().assertComplete();
   }
 
   @Test public void responseUsesScheduler() {
-    server.enqueue(new MockResponse().setBody("Hi"));
+    server.enqueue(new MockResponse());
 
-    TestSubscriber<Response<String>> subscriber = new TestSubscriber<>();
-    service.response().subscribe(subscriber);
-    subscriber.assertNoValues();
-    subscriber.assertNoTerminalEvent();
+    RecordingObserver<Object> observer = observerRule.create();
+    service.response().subscribe(observer);
+    observer.assertNoEvents();
 
     scheduler.triggerActions();
-    subscriber.assertValueCount(1);
-    subscriber.assertCompleted();
+    observer.assertAnyValue().assertComplete();
   }
 
   @Test public void resultUsesScheduler() {
-    server.enqueue(new MockResponse().setBody("Hi"));
+    server.enqueue(new MockResponse());
 
-    TestSubscriber<Result<String>> subscriber = new TestSubscriber<>();
-    service.result().subscribe(subscriber);
-    subscriber.assertNoValues();
-    subscriber.assertNoTerminalEvent();
+    RecordingObserver<Object> observer = observerRule.create();
+    service.result().subscribe(observer);
+    observer.assertNoEvents();
 
     scheduler.triggerActions();
-    subscriber.assertValueCount(1);
-    subscriber.assertCompleted();
+    observer.assertAnyValue().assertComplete();
   }
 }

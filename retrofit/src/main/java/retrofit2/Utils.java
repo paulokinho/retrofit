@@ -369,7 +369,7 @@ final class Utils {
     private final Type rawType;
     private final Type[] typeArguments;
 
-    public ParameterizedTypeImpl(Type ownerType, Type rawType, Type... typeArguments) {
+    ParameterizedTypeImpl(Type ownerType, Type rawType, Type... typeArguments) {
       // Require an owner type if the raw type needs it.
       if (rawType instanceof Class<?>
           && (ownerType == null) != (((Class<?>) rawType).getEnclosingClass() == null)) {
@@ -381,7 +381,7 @@ final class Utils {
       this.typeArguments = typeArguments.clone();
 
       for (Type typeArgument : this.typeArguments) {
-        if (typeArgument == null) throw new NullPointerException();
+        checkNotNull(typeArgument, "typeArgument == null");
         checkNotPrimitive(typeArgument);
       }
     }
@@ -407,9 +407,9 @@ final class Utils {
     }
 
     @Override public String toString() {
+      if (typeArguments.length == 0) return typeToString(rawType);
       StringBuilder result = new StringBuilder(30 * (typeArguments.length + 1));
       result.append(typeToString(rawType));
-      if (typeArguments.length == 0) return result.toString();
       result.append("<").append(typeToString(typeArguments[0]));
       for (int i = 1; i < typeArguments.length; i++) {
         result.append(", ").append(typeToString(typeArguments[i]));
@@ -421,7 +421,7 @@ final class Utils {
   private static final class GenericArrayTypeImpl implements GenericArrayType {
     private final Type componentType;
 
-    public GenericArrayTypeImpl(Type componentType) {
+    GenericArrayTypeImpl(Type componentType) {
       this.componentType = componentType;
     }
 
@@ -452,7 +452,7 @@ final class Utils {
     private final Type upperBound;
     private final Type lowerBound;
 
-    public WildcardTypeImpl(Type[] upperBounds, Type[] lowerBounds) {
+    WildcardTypeImpl(Type[] upperBounds, Type[] lowerBounds) {
       if (lowerBounds.length > 1) throw new IllegalArgumentException();
       if (upperBounds.length != 1) throw new IllegalArgumentException();
 
